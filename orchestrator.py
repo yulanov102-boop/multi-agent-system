@@ -5,7 +5,7 @@
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -167,6 +167,63 @@ class Orchestrator:
             with open(state_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         return None
+
+    def post_to_telegram(self, task_id: str) -> Dict[str, Any]:
+        """
+        Отправляет сохранённый результат в Telegram.
+
+        Args:
+            task_id: ID задачи для отправки
+
+        Returns:
+            Результат отправки
+        """
+        logger.info(f"📱 Отправляю результат {task_id} в Telegram...")
+
+        # Загружаем сохранённый результат
+        result = self.load_state(task_id)
+        if not result:
+            error_msg = f"Результат с ID {task_id} не найден"
+            logger.error(error_msg)
+            return {"status": "failed", "error": error_msg}
+
+        # Получаем подготовленное Telegram сообщение
+        telegram_data = result.get("stages", {}).get("telegram")
+        if not telegram_data:
+            error_msg = "Telegram данные не найдены в результатах"
+            logger.error(error_msg)
+            return {"status": "failed", "error": error_msg}
+
+        # Отправляем через TelegramAgent
+        send_result = self.agents["telegram_agent"].send_to_telegram(telegram_data)
+
+        # Сохраняем информацию об отправке
+        result["posting"] = send_result
+        result["posted_at"] = datetime.now().isoformat()
+        self.save_state(result, task_id)
+
+        return send_result
+
+    def list_results(self) -> List[Dict[str, Any]]:
+        """Список доступных результатов для постинга."""
+        results = []
+        if self.state_dir.exists():
+            for state_file in sorted(self.state_dir.glob("*.json"), reverse=True):
+                try:
+                    with open(state_file, "r", encoding="utf-8") as f:
+                        state = json.load(f)
+                        task_id = state.get("task_id", state_file.stem)
+                        task = state.get("task", {})
+                        results.append({
+                            "task_id": task_id,
+                            "topic": task.get("topic", "Unknown"),
+                            "status": state.get("status", "unknown"),
+                            "created": state.get("timestamps", {}).get("start"),
+                            "posted": state.get("posted_at")
+                        })
+                except Exception as e:
+                    logger.warning(f"Ошибка при чтении {state_file}: {e}")
+        return results
 
 
 if __name__ == "__main__":

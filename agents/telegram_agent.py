@@ -1,18 +1,28 @@
-"""Telegram-агент - подготавливает контент для Telegram."""
+"""Telegram-агент - подготавливает и отправляет контент в Telegram."""
 
 import json
-from typing import Dict, Any
+import os
+from typing import Dict, Any, List
 from agents.base_agent import BaseAgent
 import logging
+from telegram import Bot
+from telegram.error import TelegramError
 
 logger = logging.getLogger(__name__)
 
 
 class TelegramAgent(BaseAgent):
-    """Telegram-агент. Адаптирует контент для Telegram."""
+    """Telegram-агент. Адаптирует контент для Telegram и отправляет его."""
 
     def __init__(self):
         super().__init__("telegram_agent")
+        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        if self.bot_token:
+            self.bot = Bot(token=self.bot_token)
+        else:
+            self.bot = None
+            logger.warning("TELEGRAM_BOT_TOKEN не установлен")
 
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -74,3 +84,79 @@ class TelegramAgent(BaseAgent):
 
         self.log_result(result)
         return result
+
+    def send_to_telegram(self, telegram_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Отправляет подготовленные сообщения в Telegram.
+
+        Args:
+            telegram_data: Данные с сообщениями от process()
+
+        Returns:
+            Результат отправки
+        """
+        if not self.bot:
+            logger.error("Telegram бот не инициализирован")
+            return {"status": "failed", "error": "Telegram bot token not set"}
+
+        if not self.chat_id:
+            logger.error("TELEGRAM_CHAT_ID не установлен")
+            return {"status": "failed", "error": "TELEGRAM_CHAT_ID not set"}
+
+        try:
+            messages = telegram_data.get("messages", [])
+            sent_messages = []
+
+            logger.info(f"Отправляю {len(messages)} сообщение(я) в Telegram...")
+
+            for i, msg in enumerate(messages, 1):
+                content = msg.get("content", "")
+                if not content:
+                    logger.warning(f"Сообщение {i} пусто, пропускаю")
+                    continue
+
+                try:
+                    # Отправляем сообщение с Markdown разметкой
+                    sent_msg = self.bot.send_message(
+                        chat_id=self.chat_id,
+                        text=content,
+                        parse_mode="Markdown",
+                        disable_web_page_preview=False
+                    )
+
+                    sent_messages.append({
+                        "part": i,
+                        "message_id": sent_msg.message_id,
+                        "status": "sent",
+                        "timestamp": sent_msg.date.isoformat() if sent_msg.date else None
+                    })
+
+                    logger.info(f"✅ Сообщение {i} отправлено (ID: {sent_msg.message_id})")
+
+                except TelegramError as e:
+                    logger.error(f"❌ Ошибка при отправке сообщения {i}: {e}")
+                    sent_messages.append({
+                        "part": i,
+                        "status": "failed",
+                        "error": str(e)
+                    })
+
+            result = {
+                "agent": "telegram_agent",
+                "action": "send_to_telegram",
+                "status": "completed" if sent_messages else "failed",
+                "messages_sent": len([m for m in sent_messages if m.get("status") == "sent"]),
+                "total_messages": len(messages),
+                "sent_messages": sent_messages
+            }
+
+            self.log_result(result)
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Критическая ошибка при отправке в Telegram: {e}")
+            return {
+                "status": "failed",
+                "error": str(e),
+                "agent": "telegram_agent"
+            }

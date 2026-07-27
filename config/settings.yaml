@@ -25,3 +25,10 @@ paths:
   images: "outputs/images"
   telegram: "outputs/telegram"
   state: "state"
+
+# DALL-E 3 настройки
+dalle:
+  model: "dall-e-3"
+  size: "1024x1024"
+  quality: "standard"
+  timeout: 60
