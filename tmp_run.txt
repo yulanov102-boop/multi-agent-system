@@ -1,0 +1,119 @@
+﻿#!/usr/bin/env python
+"""
+Р“Р»Р°РІРЅС‹Р№ СЃРєСЂРёРїС‚ РґР»СЏ Р·Р°РїСѓСЃРєР° РјСѓР»СЊС‚РёР°РіРµРЅС‚Р°.
+"""
+
+import logging
+import json
+from orchestrator import Orchestrator
+
+# РќР°СЃС‚СЂР°РёРІР°РµРј Р»РѕРіРёСЂРѕРІР°РЅРёРµ
+logging.basicConfig(
+    level="INFO",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def main():
+    """РћСЃРЅРѕРІРЅР°СЏ С„СѓРЅРєС†РёСЏ."""
+    
+    # Р—Р°РґР°С‡Р° РґР»СЏ РјСѓР»СЊС‚РёР°РіРµРЅС‚Р°
+    task = {
+        "topic": "5 РѕС€РёР±РѕРє РјР°Р»РѕРіРѕ Р±РёР·РЅРµСЃР° РїСЂРё РІРЅРµРґСЂРµРЅРёРё РР",
+        "requirements": {
+            "research": "РќР°Р№С‚Рё Р°РєС‚СѓР°Р»СЊРЅСѓСЋ РёРЅС„РѕСЂРјР°С†РёСЋ РѕР± РѕС€РёР±РєР°С…",
+            "article": "РќР°РїРёСЃР°С‚СЊ РїСЂРёРІР»РµРєР°С‚РµР»СЊРЅС‹Р№ РїРѕСЃС‚",
+            "design": "РџРѕРґРіРѕС‚РѕРІРёС‚СЊ РєРѕРЅС†РµРїС†РёСЋ РєР°СЂС‚РёРЅРєРё",
+            "telegram": "РђРґР°РїС‚РёСЂРѕРІР°С‚СЊ РґР»СЏ Telegram РїСѓР±Р»РёРєР°С†РёРё"
+        }
+    }
+    
+    print("\n" + "="*60)
+    print("рџ¤– РњРЈР›Р¬РўРРђР“Р•РќРўРќРђРЇ РЎРРЎРўР•РњРђ РЎРћР—Р”РђРќРРЇ РљРћРќРўР•РќРўРђ")
+    print("="*60)
+    print(f"\nрџ“ќ РўРµРјР°: {task['topic']}")
+    print("\nвЏі РќР°С‡РёРЅР°СЋ РѕР±СЂР°Р±РѕС‚РєСѓ...\n")
+    
+    # РЎРѕР·РґР°С‘Рј РѕСЂРєРµСЃС‚СЂР°С‚РѕСЂ
+    orchestrator = Orchestrator()
+    
+    # Р—Р°РїСѓСЃРєР°РµРј СЂР°Р±РѕС‡РёР№ РїСЂРѕС†РµСЃСЃ
+    result = orchestrator.run_workflow(task)
+    
+    # Р’С‹РІРѕРґРёРј СЂРµР·СѓР»СЊС‚Р°С‚
+    print("\n" + "="*60)
+    print("вњ… Р РђР‘РћР§РР™ РџР РћР¦Р•РЎРЎ Р—РђР’Р•Р РЁРЃРќ")
+    print("="*60)
+    
+    if result.get("status") == "completed":
+        print("\nрџ“Љ Р Р•Р—РЈР›Р¬РўРђРўР« РџРћ РЎРўРђР”РРЇРњ:\n")
+        
+        # РСЃСЃР»РµРґРѕРІР°РЅРёРµ
+        if "research" in result["stages"]:
+            research = result["stages"]["research"]
+            print("1пёЏвѓЈ РРЎРЎР›Р•Р”РћР’РђРќРР•:")
+            print(f"   РЎС‚Р°С‚СѓСЃ: вњ…")
+            if "topic" in research:
+                print(f"   РўРµРјР°: {research['topic']}")
+            if "key_points" in research:
+                print(f"   РљР»СЋС‡РµРІС‹С… РїСѓРЅРєС‚РѕРІ РЅР°Р№РґРµРЅРѕ: {len(research['key_points'])}")
+            print()
+        
+        # РЎС‚Р°С‚СЊСЏ
+        if "article" in result["stages"]:
+            article = result["stages"]["article"]
+            print("2пёЏвѓЈ РЎРўРђРўР¬РЇ:")
+            print(f"   РЎС‚Р°С‚СѓСЃ: вњ…")
+            if "title" in article:
+                print(f"   Р—Р°РіРѕР»РѕРІРѕРє: {article['title'][:60]}...")
+            if "sections" in article:
+                print(f"   Р Р°Р·РґРµР»РѕРІ: {len(article['sections'])}")
+            print()
+        
+        # Р”РёР·Р°Р№РЅ
+        if "design" in result["stages"]:
+            design = result["stages"]["design"]
+            print("3пёЏвѓЈ Р”РР—РђР™Рќ:")
+            print(f"   РЎС‚Р°С‚СѓСЃ: вњ…")
+            if "concept" in design:
+                print(f"   РљРѕРЅС†РµРїС†РёСЏ: {design['concept'][:50]}...")
+            if "color_palette" in design:
+                print(f"   Р¦РІРµС‚РѕРІР°СЏ РїР°Р»РёС‚СЂР°: РіРѕС‚РѕРІР°")
+            print()
+        
+        # Telegram
+        if "telegram" in result["stages"]:
+            telegram = result["stages"]["telegram"]
+            print("4пёЏвѓЈ TELEGRAM:")
+            print(f"   РЎС‚Р°С‚СѓСЃ: вњ…")
+            if "message_count" in telegram:
+                print(f"   РЎРѕРѕР±С‰РµРЅРёР№ РґР»СЏ РїСѓР±Р»РёРєР°С†РёРё: {telegram['message_count']}")
+            if "messages" in telegram:
+                for i, msg in enumerate(telegram["messages"], 1):
+                    if "hashtags" in msg:
+                        print(f"   РҐРµС€С‚РµРіРё: {len(msg['hashtags'])} РЅР°Р№РґРµРЅРѕ")
+            print()
+        
+        # Р¤РёРЅР°Р»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР°
+        if "editor" in result["stages"]:
+            editor = result["stages"]["editor"]
+            print("5пёЏвѓЈ Р¤РРќРђР›Р¬РќРђРЇ РџР РћР’Р•Р РљРђ:")
+            print(f"   РЎС‚Р°С‚СѓСЃ: вњ…")
+            if "quality_score" in editor:
+                print(f"   РћС†РµРЅРєР° РєР°С‡РµСЃС‚РІР°: {editor['quality_score']}/10")
+            if "final_approval" in editor:
+                approval = "вњ… РћРґРѕР±СЂРµРЅРѕ" if editor["final_approval"] else "вљ пёЏ РўСЂРµР±СѓРµС‚ РґРѕСЂР°Р±РѕС‚РєРё"
+                print(f"   Р РµР·СѓР»СЊС‚Р°С‚: {approval}")
+            print()
+    else:
+        print(f"\nвќЊ РћС€РёР±РєР°: {result.get('error', 'РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°')}")
+    
+    print("\n" + "="*60)
+    print(f"рџ“‚ Р РµР·СѓР»СЊС‚Р°С‚С‹ СЃРѕС…СЂР°РЅРµРЅС‹ РІ: outputs/")
+    print(f"рџ’ѕ РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕС…СЂР°РЅРµРЅРѕ РІ: state/")
+    print("="*60 + "\n")
+
+
+if __name__ == "__main__":
+    main()

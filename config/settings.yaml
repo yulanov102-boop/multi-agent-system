@@ -1,0 +1,27 @@
+# Глобальные настройки системы
+project_name: "Content Multi-Agent System"
+version: "1.0.0"
+
+# Переменные окружения
+log_level: "INFO"
+state_dir: "./state"
+output_dir: "./outputs"
+
+# API настройки
+anthropic:
+  model: "claude-3-5-sonnet-20241022"
+  temperature: 0.7
+  max_tokens: 2000
+
+telegram:
+  message_prefix: "📱 **Содержание**"
+  message_suffix: ""
+  char_limit: 4096
+
+# Пути сохранения
+paths:
+  research: "outputs/research"
+  articles: "outputs/articles"
+  images: "outputs/images"
+  telegram: "outputs/telegram"
+  state: "state"

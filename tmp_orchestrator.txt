@@ -1,0 +1,174 @@
+﻿"""
+РћСЂРєРµСЃС‚СЂР°С‚РѕСЂ РјСѓР»СЊС‚РёР°РіРµРЅС‚РЅРѕР№ СЃРёСЃС‚РµРјС‹.
+РљРѕРѕСЂРґРёРЅРёСЂСѓРµС‚ СЂР°Р±РѕС‡РёР№ РїСЂРѕС†РµСЃСЃ Р°РіРµРЅС‚РѕРІ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ Рё СЂР°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёСЏ РєРѕРЅС‚РµРЅС‚Р°.
+"""
+
+import json
+import logging
+from typing import Dict, Any, Optional
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+from datetime import datetime
+import uuid
+
+load_dotenv()
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+class Orchestrator:
+    """РЈРїСЂР°РІР»СЏРµС‚ СЂР°Р±РѕС‡РёРј РїСЂРѕС†РµСЃСЃРѕРј Р°РіРµРЅС‚РѕРІ Рё СЃРѕСЃС‚РѕСЏРЅРёРµРј."""
+
+    def __init__(self):
+        self.state_dir = Path(os.getenv("STATE_DIR", "./state"))
+        self.output_dir = Path(os.getenv("OUTPUT_DIR", "./outputs"))
+        self.state_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(exist_ok=True)
+        
+        # РРјРїРѕСЂС‚РёСЂСѓРµРј Р°РіРµРЅС‚РѕРІ
+        from agents.researcher import Researcher
+        from agents.copywriter import Copywriter
+        from agents.designer import Designer
+        from agents.telegram_agent import TelegramAgent
+        from agents.editor import Editor
+        
+        self.agents = {
+            "researcher": Researcher(),
+            "copywriter": Copywriter(),
+            "designer": Designer(),
+            "telegram_agent": TelegramAgent(),
+            "editor": Editor(),
+        }
+
+    def run_workflow(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Р—Р°РїСѓСЃРєР°РµС‚ РїРѕР»РЅС‹Р№ СЂР°Р±РѕС‡РёР№ РїСЂРѕС†РµСЃСЃ С‡РµСЂРµР· РІСЃРµС… Р°РіРµРЅС‚РѕРІ.
+
+        Args:
+            task: Р—Р°РґР°С‡Р° РґР»СЏ РѕР±СЂР°Р±РѕС‚РєРё
+
+        Returns:
+            Р¤РёРЅР°Р»СЊРЅС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚ РїРѕСЃР»Рµ РїСЂРѕС…РѕР¶РґРµРЅРёСЏ С‡РµСЂРµР· РІСЃРµС… Р°РіРµРЅС‚РѕРІ
+        """
+        task_id = task.get("id", str(uuid.uuid4()))
+        task_title = task.get("topic", "Untitled")
+        
+        logger.info(f"в•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—")
+        logger.info(f"в•‘ РќР°С‡РёРЅР°СЋ СЂР°Р±РѕС‡РёР№ РїСЂРѕС†РµСЃСЃ                в•‘")
+        logger.info(f"в•‘ Р—Р°РґР°С‡Р°: {task_title[:30]:<30} в•‘")
+        logger.info(f"в•‘ ID: {task_id[:34]:<34} в•‘")
+        logger.info(f"в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ")
+
+        result = {
+            "task_id": task_id,
+            "task": task,
+            "stages": {},
+            "timestamps": {
+                "start": datetime.now().isoformat()
+            }
+        }
+
+        # РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ РІС‹РїРѕР»РЅРµРЅРёСЏ Р°РіРµРЅС‚РѕРІ
+        workflow_order = ["researcher", "copywriter", "designer", "telegram_agent", "editor"]
+        
+        try:
+            # РќР°С‡РёРЅР°РµРј СЃ РёСЃСЃР»РµРґРѕРІР°С‚РµР»СЏ
+            logger.info(f"\nрџ“Љ РЎРўРђР”РРЇ 1: РСЃСЃР»РµРґРѕРІР°РЅРёРµ")
+            logger.info("=" * 50)
+            researcher_result = self.agents["researcher"].process(task)
+            result["stages"]["research"] = researcher_result
+            
+            # РљРѕРїРёСЂР°Р№С‚РµСЂ РїРёС€РµС‚ РєРѕРЅС‚РµРЅС‚
+            logger.info(f"\nвњЌпёЏ РЎРўРђР”РРЇ 2: РЎРѕР·РґР°РЅРёРµ РєРѕРЅС‚РµРЅС‚Р°")
+            logger.info("=" * 50)
+            copywriter_input = {
+                "research": researcher_result,
+                "topic": task.get("topic", "")
+            }
+            copywriter_result = self.agents["copywriter"].process(copywriter_input)
+            result["stages"]["article"] = copywriter_result
+            
+            # Р”РёР·Р°Р№РЅРµСЂ СЃРѕР·РґР°С‘С‚ РІРёР·СѓР°Р»СЊРЅСѓСЋ РєРѕРЅС†РµРїС†РёСЋ
+            logger.info(f"\nрџЋЁ РЎРўРђР”РРЇ 3: Р”РёР·Р°Р№РЅ-РєРѕРЅС†РµРїС†РёСЏ")
+            logger.info("=" * 50)
+            designer_input = {
+                "article": copywriter_result,
+                "topic": task.get("topic", "")
+            }
+            designer_result = self.agents["designer"].process(designer_input)
+            result["stages"]["design"] = designer_result
+            
+            # Telegram-Р°РіРµРЅС‚ Р°РґР°РїС‚РёСЂСѓРµС‚ РєРѕРЅС‚РµРЅС‚
+            logger.info(f"\nрџ“± РЎРўРђР”РРЇ 4: Telegram-Р°РґР°РїС‚Р°С†РёСЏ")
+            logger.info("=" * 50)
+            telegram_input = {
+                "article": copywriter_result,
+                "topic": task.get("topic", "")
+            }
+            telegram_result = self.agents["telegram_agent"].process(telegram_input)
+            result["stages"]["telegram"] = telegram_result
+            
+            # Р¤РёРЅР°Р»СЊРЅС‹Р№ СЂРµРґР°РєС‚РѕСЂ РїСЂРѕРІРµСЂСЏРµС‚ РІСЃС‘
+            logger.info(f"\nвњ… РЎРўРђР”РРЇ 5: Р¤РёРЅР°Р»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР°")
+            logger.info("=" * 50)
+            editor_input = {
+                "research": researcher_result,
+                "article": copywriter_result,
+                "design": designer_result,
+                "telegram": telegram_result
+            }
+            editor_result = self.agents["editor"].process(editor_input)
+            result["stages"]["editor"] = editor_result
+            
+            result["status"] = "completed"
+            result["timestamps"]["end"] = datetime.now().isoformat()
+            
+            logger.info(f"\nвњ… Р Р°Р±РѕС‡РёР№ РїСЂРѕС†РµСЃСЃ СѓСЃРїРµС€РЅРѕ Р·Р°РІРµСЂС€С‘РЅ!")
+            logger.info(f"в•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—")
+            logger.info(f"в•‘ Р Р•Р—РЈР›Р¬РўРђРўР«:                            в•‘")
+            logger.info(f"в•‘ вЂў РСЃСЃР»РµРґРѕРІР°РЅРёРµ: вњ…                     в•‘")
+            logger.info(f"в•‘ вЂў РЎС‚Р°С‚СЊСЏ: вњ…                           в•‘")
+            logger.info(f"в•‘ вЂў Р”РёР·Р°Р№РЅ: вњ…                           в•‘")
+            logger.info(f"в•‘ вЂў Telegram: вњ…                         в•‘")
+            logger.info(f"в•‘ вЂў РџСЂРѕРІРµСЂРєР°: вњ…                         в•‘")
+            logger.info(f"в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ")
+            
+        except Exception as e:
+            logger.error(f"вќЊ РћС€РёР±РєР° РІ СЂР°Р±РѕС‡РµРј РїСЂРѕС†РµСЃСЃРµ: {e}", exc_info=True)
+            result["status"] = "failed"
+            result["error"] = str(e)
+            result["timestamps"]["error"] = datetime.now().isoformat()
+
+        # РЎРѕС…СЂР°РЅСЏРµРј СЂРµР·СѓР»СЊС‚Р°С‚
+        self.save_state(result, task_id)
+        
+        return result
+
+    def save_state(self, state: Dict[str, Any], task_id: str) -> None:
+        """РЎРѕС…СЂР°РЅСЏРµС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ РІ С„Р°Р№Р»."""
+        state_file = self.state_dir / f"{task_id}.json"
+        with open(state_file, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        logger.info(f"рџ’ѕ РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕС…СЂР°РЅРµРЅРѕ: {state_file}")
+        
+        # РўР°РєР¶Рµ СЃРѕС…СЂР°РЅСЏРµРј РІ outputs РґР»СЏ СѓРґРѕР±СЃС‚РІР°
+        output_file = self.output_dir / f"{task_id}_result.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+
+    def load_state(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Р—Р°РіСЂСѓР¶Р°РµС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ РёР· С„Р°Р№Р»Р°."""
+        state_file = self.state_dir / f"{task_id}.json"
+        if state_file.exists():
+            with open(state_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return None
+
+
+if __name__ == "__main__":
+    orchestrator = Orchestrator()
+    print("вњ… РћСЂРєРµСЃС‚СЂР°С‚РѕСЂ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ Рё РіРѕС‚РѕРІ Рє СЂР°Р±РѕС‚Рµ")
